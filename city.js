@@ -1,45 +1,45 @@
-const e = require('express');
+const e = require("express");
 
 module.exports = async function (api) {
-
-    const bdd = await require('./mysql');
+    const bdd = await require("./mysql");
 
     class CityControler {
-        
         async list() {
-            const cities = await bdd.query('SELECT * FROM city');
+            const cities = await bdd.query("SELECT * FROM city");
 
             return cities;
         }
 
-        async getCity(name) {
-            const getCityId = await bdd.query(`SELECT id FROM city WHERE name = "${name}"`);
+        async getOrCreateCity(name) {
+            const getId = await bdd.query(
+                `SELECT id FROM city WHERE name = "${name}"`
+            );
+            const createByName = await bdd.query(
+                `INSERT INTO city (name) VALUES "${name}"`
+            );
 
-            return getCityId;
-        }
-
-        async createCity(name) {
-            const createCity = await bdd.query(`INSERT INTO city (name) VALUES "${name}"`);ù
-
-            return createCity;
+            return [getId, createByName];
         }
     }
 
     const city = new CityControler();
 
+    api.get("/city", async (req, res) => {
+        const getId = await city.getId(req.query.name);
+        const createByName = await city.createByName(req.query.name);
+        let result;
+        let city_id;
 
-    api.get('/city', async (req, res) => {
-        const getCityId = await city.getCityId(req.query.name);
-        const createCity = await city.createCity(req.query.name);
-
-        if (getCityId.length > 0) {
-            result = {success: true, errMessage: ""};
+        if (getId < 0) {
+            result = { success: false, errMessage: "city unavailable" };
         } else {
-            result = {success: false, errMessage: "city unavailable"};
+            city_id = createByName[0]["id"];
+            result = { success: true, errMessage: "city created" };
         }
 
-        res.send([await city.list(), result]);
+        // res.send([await city.list(), result]);
+        res.send(city_id);
     });
 
     return new CityControler();
-}
+};
